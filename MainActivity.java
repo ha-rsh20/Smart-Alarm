@@ -1,34 +1,50 @@
-package com.example.smartalarm;
+package com.example.testmap;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.example.testmap.databinding.ActivityMapsBinding;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-public class MainActivity extends Activity {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
-    GoogleMap googleMap;
-    Button btnShowLocation;
+    FloatingActionButton btnShowLocation;
+    //Button btnShowLocation;
     private static final int REQUEST_CODE_PERMISSION = 2;
     String mPermission = Manifest.permission.ACCESS_FINE_LOCATION;
-
-    // GPSTracker class
     GPSTracker gps;
-    private PackageManager MockPackageManager;
-    private androidx.core.app.ActivityCompat ActivityCompat;
+    GoogleMap googleMap;
+    PackageManager MockPackageManager;
+    private ActivityMapsBinding binding;
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+
+        com.example.testmap.databinding.ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        setContentView(binding.getRoot());
+
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
 
         try {
             if (ActivityCompat.checkSelfPermission(this, mPermission)
@@ -36,35 +52,37 @@ public class MainActivity extends Activity {
 
                 ActivityCompat.requestPermissions(this, new String[]{mPermission},
                         REQUEST_CODE_PERMISSION);
-
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
 
-        btnShowLocation = (Button) findViewById(R.id.getlocbtn);
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        gps = new GPSTracker(MapsActivity.this);
 
-        // show location button click event
+        btnShowLocation = findViewById(R.id.getlocbtn);
+
         btnShowLocation.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View arg0) {
-                gps = new GPSTracker(MainActivity.this);
+                gps = new GPSTracker(MapsActivity.this);
 
                 if(gps.canGetLocation()){
-
-                    double latitude = gps.getLatitude();
-                    double longitude = gps.getLongitude();
-
-                    LatLng user_loc = new LatLng(latitude, longitude);
-                    googleMap.addMarker(new MarkerOptions().position(user_loc).title("You are here"));
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(user_loc,10),2500,null);
-                    Toast.makeText(getApplicationContext(), "Your Location is - \nLat: "
-                            + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
+                    if(gps.canGetLocation()){
+                        double latitude = gps.getLatitude();
+                        double longitude =  gps.getLongitude();
+                        LatLng user_loc = new LatLng(latitude, longitude);
+                        googleMap.addMarker(new MarkerOptions().position(user_loc).title("You are here"));
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(user_loc,10),2500,null);
+                    }else{
+                        gps.showSettingsAlert();
+                    }
                 }else{
                     gps.showSettingsAlert();
                 }
-
             }
         });
     }
